@@ -1,0 +1,2364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>묻는 기도</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2C3E58">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="묻는 기도">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600&family=Pretendard:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F3EC;
+    --bg2: #EFEBE3;
+    --white: #FFFFFF;
+    --text: #1A1A1A;
+    --text-muted: #7A7570;
+    --navy: #2C3E58;
+    --navy-light: #3D5070;
+    --gold: #B89C6A;
+    --gold-light: #D4B98A;
+    --border: #E0D9CE;
+    --card-bg: #FDFAF5;
+    --serif: 'Noto Serif KR', serif;
+    --sans: 'Pretendard', -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* SCREEN SYSTEM */
+  .screen {
+    display: none;
+    min-height: 100vh;
+    flex-direction: column;
+    animation: fadeIn 0.4s ease;
+  }
+  .screen.active { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* MOBILE WRAPPER */
+  .app-wrapper {
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    background: var(--bg);
+  }
+
+
+  /* ======================== ALARM MODAL ======================== */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 500;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+
+  .modal-sheet {
+    background: var(--bg);
+    border-radius: 24px 24px 0 0;
+    width: 100%;
+    max-width: 430px;
+    padding: 28px 28px calc(40px + env(safe-area-inset-bottom));
+    animation: slideUp 0.3s cubic-bezier(0.32,0.72,0,1);
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  .modal-handle {
+    width: 40px; height: 4px;
+    background: var(--border);
+    border-radius: 4px;
+    margin: 0 auto 24px;
+  }
+
+  .modal-title {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .modal-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  .alarm-section-label {
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 1px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .preset-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .preset-btn {
+    flex: 1;
+    background: var(--card-bg);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .preset-btn .preset-icon { font-size: 20px; }
+  .preset-btn .preset-name { font-size: 11px; color: var(--text-muted); font-family: var(--sans); }
+  .preset-btn .preset-time { font-size: 13px; color: var(--navy); font-family: var(--sans); font-weight: 500; }
+  .preset-btn.selected { border-color: var(--navy); background: rgba(44,62,88,0.07); }
+  .preset-btn:active { transform: scale(0.97); }
+
+  .time-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    background: var(--card-bg);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    transition: border 0.2s;
+  }
+
+  .time-input-row:focus-within { border-color: var(--navy); }
+  .time-input-row input[type="time"] {
+    border: none;
+    background: transparent;
+    font-family: var(--sans);
+    font-size: 18px;
+    color: var(--text);
+    outline: none;
+    flex: 1;
+  }
+
+  .repeat-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+
+  .day-btn {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--card-bg);
+    font-size: 12px;
+    font-family: var(--sans);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .day-btn.selected { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .day-btn:active { transform: scale(0.92); }
+
+  .repeat-shortcut-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .shortcut-btn {
+    flex: 1;
+    padding: 8px;
+    font-size: 12px;
+    font-family: var(--sans);
+    color: var(--text-muted);
+    background: var(--card-bg);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .shortcut-btn:active { background: var(--bg2); }
+
+  .auto-cancel-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 28px;
+  }
+
+  .auto-cancel-label { font-size: 14px; color: var(--text); font-family: var(--sans); }
+  .auto-cancel-sub   { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .toggle-switch {
+    width: 44px; height: 26px;
+    background: var(--border);
+    border-radius: 13px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.25s;
+    flex-shrink: 0;
+    border: none;
+  }
+
+  .toggle-switch.on { background: var(--navy); }
+
+  .toggle-switch::after {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    top: 3px; left: 3px;
+    transition: transform 0.25s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+
+  .toggle-switch.on::after { transform: translateX(18px); }
+
+  /* Registered alarms list */
+  .alarm-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+
+  .alarm-item {
+    display: flex;
+    align-items: center;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .alarm-item-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--navy);
+    flex-shrink: 0;
+  }
+
+  .alarm-item-info { flex: 1; }
+  .alarm-item-time { font-size: 15px; font-family: var(--sans); font-weight: 600; color: var(--navy); }
+  .alarm-item-days { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .alarm-delete-btn {
+    width: 28px; height: 28px;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s;
+  }
+
+  .alarm-delete-btn:active { background: var(--border); }
+
+  /* Alarm bell button */
+  .btn-alarm {
+    width: 100%;
+    background: var(--card-bg);
+    color: var(--navy);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 15px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-alarm:active { background: var(--bg2); }
+
+  /* ======================== HOME ======================== */
+  #home {
+    background: var(--bg);
+    padding: 0;
+  }
+
+  .home-hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .home-hero::before {
+    content: '';
+    position: absolute;
+    top: -80px;
+    right: -60px;
+    width: 280px;
+    height: 280px;
+    background: radial-gradient(circle, rgba(184,156,106,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .home-header {
+    padding-top: 64px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 60px;
+  }
+
+  .logo-icon {
+    width: 40px;
+    height: 40px;
+    border: 1.5px solid var(--navy);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--navy);
+    font-size: 18px;
+  }
+
+  .logo-text {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--navy);
+    letter-spacing: -0.3px;
+  }
+
+  .home-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-bottom: 40px;
+  }
+
+  .home-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(44,62,88,0.08);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 11px;
+    color: var(--navy);
+    letter-spacing: 0.5px;
+    margin-bottom: 28px;
+    width: fit-content;
+    font-family: var(--sans);
+    font-weight: 500;
+  }
+
+  .home-title {
+    font-family: var(--serif);
+    font-size: 34px;
+    font-weight: 400;
+    line-height: 1.35;
+    color: var(--text);
+    margin-bottom: 20px;
+    letter-spacing: -0.5px;
+  }
+
+  .home-title em {
+    font-style: normal;
+    color: var(--navy);
+  }
+
+  .home-sub {
+    font-size: 15px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    margin-bottom: 56px;
+    font-weight: 300;
+  }
+
+  .home-divider {
+    width: 32px;
+    height: 1.5px;
+    background: var(--gold);
+    margin-bottom: 56px;
+  }
+
+  .home-question-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .home-question-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle at bottom right, rgba(184,156,106,0.1) 0%, transparent 70%);
+  }
+
+  .question-label {
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+
+  .question-text {
+    font-family: var(--serif);
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  .leaf-deco {
+    position: absolute;
+    bottom: 16px;
+    right: 20px;
+    font-size: 22px;
+    opacity: 0.25;
+  }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 18px;
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98);
+    background: var(--navy-light);
+  }
+
+  .btn-secondary {
+    width: 100%;
+    background: transparent;
+    color: var(--navy);
+    border: 1.5px solid var(--navy);
+    border-radius: 14px;
+    padding: 16px;
+    font-family: var(--serif);
+    font-size: 16px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary:active {
+    background: rgba(44,62,88,0.05);
+  }
+
+  /* ======================== STEP SCREENS ======================== */
+  .step-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0 28px 40px;
+    background: var(--bg);
+  }
+
+  .step-header {
+    padding-top: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 40px;
+  }
+
+  .back-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 20px;
+    border-radius: 50%;
+    transition: background 0.2s;
+  }
+
+  .back-btn:active { background: var(--border); }
+
+  .progress-text {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-family: var(--sans);
+    letter-spacing: 0.5px;
+  }
+
+  .progress-bar-wrap {
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-bottom: 48px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--navy);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  .step-title {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--text);
+    margin-bottom: 32px;
+    letter-spacing: -0.3px;
+  }
+
+  .content-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    margin-bottom: 32px;
+    position: relative;
+  }
+
+  .content-card .card-main {
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.8;
+    color: var(--text);
+    font-weight: 400;
+    margin-bottom: 20px;
+  }
+
+  .content-card .card-highlight {
+    border-left: 2px solid var(--gold);
+    padding-left: 16px;
+    font-family: var(--serif);
+    font-size: 15px;
+    color: var(--navy);
+    line-height: 1.7;
+    font-style: italic;
+  }
+
+  .content-card   .bible-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--navy);
+    text-decoration: none;
+    font-size: 12px;
+    font-family: var(--sans);
+    border-bottom: 1px dashed rgba(44,62,88,0.3);
+    padding-bottom: 1px;
+    transition: opacity 0.2s;
+    cursor: pointer;
+  }
+  .bible-link:active { opacity: 0.6; }
+  .bible-link::after {
+    content: '↗';
+    font-size: 10px;
+    opacity: 0.6;
+  }
+
+  .card-ref {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--sans);
+    padding-left: 16px;
+  }
+
+  /* TEXT AREA */
+  .input-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    font-weight: 400;
+    letter-spacing: 0.2px;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    font-family: var(--serif);
+    font-size: 16px;
+    color: var(--text);
+    line-height: 1.7;
+    resize: none;
+    outline: none;
+    transition: border 0.2s;
+    min-height: 120px;
+    margin-bottom: 32px;
+  }
+
+  textarea::placeholder {
+    color: #C5BFB5;
+    font-family: var(--serif);
+    font-weight: 300;
+  }
+
+  textarea:focus {
+    border-color: var(--navy);
+  }
+
+  /* EMOTION SELECT */
+  .emotion-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    font-weight: 400;
+  }
+
+  .emotion-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 40px;
+    justify-content: space-between;
+  }
+
+  .emotion-btn {
+    flex: 1;
+    background: var(--card-bg);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .emotion-btn .emoji { font-size: 22px; }
+  .emotion-btn .emo-label { font-size: 10px; color: var(--text-muted); font-family: var(--sans); }
+
+  .emotion-btn.selected {
+    border-color: var(--navy);
+    background: rgba(44,62,88,0.06);
+  }
+
+  .emotion-btn:active { transform: scale(0.96); }
+
+  /* VERSE CARD */
+  .verse-card {
+    background: var(--navy);
+    color: #fff;
+    border-radius: 16px;
+    padding: 32px 28px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .verse-card .bible-link {
+    color: rgba(255,255,255,0.8);
+    border-bottom-color: rgba(255,255,255,0.3);
+  }
+  .verse-card .bible-link::after { opacity: 0.5; }
+
+  .verse-card::before {
+    content: '\201C';
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    font-size: 100px;
+    font-family: var(--serif);
+    color: rgba(255,255,255,0.07);
+    line-height: 1;
+  }
+
+  .verse-text {
+    font-family: var(--serif);
+    font-size: 18px;
+    line-height: 1.8;
+    font-weight: 400;
+    margin-bottom: 16px;
+  }
+
+  .verse-ref {
+    font-size: 12px;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 0.5px;
+  }
+
+  .verse-note {
+    font-family: var(--serif);
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.8;
+    margin-bottom: 20px;
+    font-weight: 300;
+  }
+
+  /* COMPLETE SCREEN */
+  .complete-wrap {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 32px;
+    text-align: center;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .complete-wrap::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(184,156,106,0.12) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .complete-icon {
+    width: 72px;
+    height: 72px;
+    background: var(--navy);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 36px;
+    color: #fff;
+    font-size: 28px;
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .complete-title {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  .complete-sub {
+    font-family: var(--serif);
+    font-size: 15px;
+    color: var(--text-muted);
+    line-height: 1.8;
+    margin-bottom: 56px;
+    font-weight: 300;
+    font-style: italic;
+  }
+
+  .complete-buttons {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* RECORDS SCREEN */
+  .records-header {
+    padding: 56px 28px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .records-title {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .records-tabs {
+    display: flex;
+    gap: 0;
+    background: var(--bg2);
+    border-radius: 10px;
+    padding: 3px;
+    margin: 20px 28px;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 8px;
+    font-size: 13px;
+    font-family: var(--sans);
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 400;
+  }
+
+  .tab-btn.active {
+    background: var(--white);
+    color: var(--navy);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+
+  .records-list {
+    padding: 8px 28px 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .record-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .record-card:active { transform: scale(0.99); }
+
+  .record-left { flex: 1; }
+  .record-date { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.3px; }
+  .record-question { font-family: var(--serif); font-size: 16px; color: var(--text); line-height: 1.5; }
+  .record-emotion { font-size: 24px; }
+
+  /* ANSWERED BADGE */
+  .answered-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(184,156,106,0.15);
+    border: 1px solid rgba(184,156,106,0.4);
+    color: #8A6D3B;
+    font-size: 10px;
+    font-family: var(--sans);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    margin-top: 5px;
+    width: fit-content;
+  }
+
+  .record-card.answered {
+    border-color: rgba(184,156,106,0.4);
+    background: linear-gradient(135deg, #FDFAF5 0%, #FDF7ED 100%);
+  }
+
+  /* ANSWER BUTTON in detail */
+  .btn-answered {
+    width: 100%;
+    background: linear-gradient(135deg, #B89C6A, #C9AE80);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 17px;
+    font-family: var(--serif);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-answered:active { transform: scale(0.98); opacity: 0.9; }
+
+  .btn-undo-answered {
+    width: 100%;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-undo-answered:active { background: var(--bg2); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--navy);
+    color: #fff;
+    font-family: var(--sans);
+    font-size: 14px;
+    padding: 12px 24px;
+    border-radius: 30px;
+    opacity: 0;
+    transition: all 0.35s ease;
+    pointer-events: none;
+    z-index: 999;
+    white-space: nowrap;
+    box-shadow: 0 6px 20px rgba(44,62,88,0.25);
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* RECORD DETAIL */
+  .detail-screen {
+    min-height: 100vh;
+    background: var(--bg);
+  }
+
+  .detail-header {
+    padding: 56px 28px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .detail-date-badge {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--bg2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-left: auto;
+  }
+
+  .detail-body {
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .detail-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+  }
+
+  .detail-section-label {
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+
+  .detail-section-content {
+    font-family: var(--serif);
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--text);
+    font-weight: 300;
+  }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: rgba(247,243,236,0.92);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 100;
+  }
+
+  .nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 16px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-family: var(--sans);
+    transition: color 0.2s;
+    border: none;
+    background: transparent;
+  }
+
+  .nav-btn.active { color: var(--navy); }
+  .nav-btn svg { width: 22px; height: 22px; }
+
+  .nav-center-btn {
+    width: 48px;
+    height: 48px;
+    background: var(--navy);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    box-shadow: 0 4px 16px rgba(44,62,88,0.3);
+    transition: transform 0.2s;
+  }
+
+  .nav-center-btn:active { transform: scale(0.93); }
+
+  /* QUOTE LINE */
+  .quote-line {
+    font-family: var(--serif);
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.8;
+    font-style: italic;
+    padding: 0 8px;
+    margin-bottom: 40px;
+  }
+
+  /* SPACER */
+  .spacer { flex: 1; }
+
+  /* STEP FLEX */
+  .step-body { flex: 1; display: flex; flex-direction: column; }
+  .step-footer { padding-top: 24px; }
+
+  /* Scroll content card */
+  .scroll-content {
+    max-height: 200px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scroll-content::-webkit-scrollbar { display: none; }
+
+  /* verse emphasis */
+  .verse-emphasis {
+    font-family: var(--serif);
+    font-size: 13px;
+    font-style: italic;
+    color: var(--text-muted);
+    line-height: 1.8;
+    text-align: center;
+    padding: 0 12px 32px;
+  }
+
+  /* Reflection note */
+  .reflection-note {
+    background: rgba(44,62,88,0.05);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 28px;
+  }
+
+  .reflection-note p {
+    font-family: var(--serif);
+    font-size: 14px;
+    color: var(--navy);
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+<div class="app-wrapper">
+
+  <!-- ======================== HOME ======================== -->
+  <div class="screen active" id="home">
+    <div class="home-hero">
+      <div class="home-header">
+        <img src="icon-192.png" alt="묻는 기도" style="width:40px;height:40px;border-radius:10px;object-fit:cover;">
+        <span class="logo-text">묻는 기도</span>
+      </div>
+
+      <div class="home-main">
+        <div class="home-badge">✦ 오늘의 기도</div>
+        <h1 class="home-title">하나님께,<br><em>먼저 묻는</em> 시간</h1>
+        <p class="home-sub">기도는 구하는 것이 아니라,<br>묻는 것에서 시작됩니다</p>
+        <div class="home-divider"></div>
+
+        <div class="home-question-card">
+          <div class="question-label">생각해 보기</div>
+          <p class="question-text">"오늘, 하나님께<br>무엇을 물어보셨나요?"</p>
+          <div class="leaf-deco">🌿</div>
+        </div>
+
+        <button class="btn-primary" onclick="startPrayer()">지금 묻기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== STEP 1: 오늘의 묵상 ======================== -->
+  <div class="screen" id="step1">
+    <div class="step-screen">
+      <div class="step-header">
+        <div class="back-btn" onclick="goHome()">←</div>
+        <span class="progress-text">1 / 6</span>
+        <div style="width:36px"></div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" style="width: 16.6%"></div>
+      </div>
+
+      <div class="step-body">
+        <h2 class="step-title">오늘의 말씀</h2>
+
+        <div class="content-card">
+          <p class="card-main" id="step1Main"></p>
+          <div class="card-highlight" id="step1Highlight"></div>
+          <p class="card-ref" id="step1Ref"></p>
+        </div>
+
+        <div class="reflection-note">
+          <p id="step1Note"></p>
+        </div>
+
+        <p class="input-label" style="margin-top:8px;">이 말씀 앞에서 먼저 하나님께 물을 것을 적어보세요</p>
+        <textarea id="wordReflection" placeholder="하나님, 이 말씀을 통해..." rows="4"></textarea>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn-primary" onclick="goStep(2)">다음</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== STEP 2: 나의 상황 ======================== -->
+  <div class="screen" id="step2">
+    <div class="step-screen">
+      <div class="step-header">
+        <div class="back-btn" onclick="goStep(1)">←</div>
+        <span class="progress-text">2 / 6</span>
+        <div style="width:36px"></div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" style="width: 33.3%"></div>
+      </div>
+
+      <div class="step-body">
+        <h2 class="step-title">지금 어떤<br>상황인가요?</h2>
+
+        <p class="input-label">지금 나의 상황을 자유롭게 적어보세요</p>
+        <textarea id="situation" placeholder="오늘 마음에 걸리는 것이 있나요..." rows="4"></textarea>
+
+        <p class="emotion-label">지금 내 마음은 어떤가요?</p>
+        <div class="emotion-row">
+          <button class="emotion-btn" onclick="selectEmotion(this, '😊')">
+            <span class="emoji">😊</span>
+            <span class="emo-label">좋음</span>
+          </button>
+          <button class="emotion-btn" onclick="selectEmotion(this, '😐')">
+            <span class="emoji">😐</span>
+            <span class="emo-label">보통</span>
+          </button>
+          <button class="emotion-btn" onclick="selectEmotion(this, '😔')">
+            <span class="emoji">😔</span>
+            <span class="emo-label">걱정</span>
+          </button>
+          <button class="emotion-btn" onclick="selectEmotion(this, '😰')">
+            <span class="emoji">😰</span>
+            <span class="emo-label">불안</span>
+          </button>
+          <button class="emotion-btn" onclick="selectEmotion(this, '😢')">
+            <span class="emoji">😢</span>
+            <span class="emo-label">힘듦</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn-primary" onclick="goStep(3)">마음 정리하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== STEP 3: 하나님께 묻기 ======================== -->
+  <div class="screen" id="step3">
+    <div class="step-screen">
+      <div class="step-header">
+        <div class="back-btn" onclick="goStep(2)">←</div>
+        <span class="progress-text">3 / 6</span>
+        <div style="width:36px"></div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" style="width: 50%"></div>
+      </div>
+
+      <div class="step-body">
+        <h2 class="step-title">하나님께<br>"무엇을 물어볼까요?"</h2>
+
+        <p class="input-label">하나님께 드리고 싶은 나의 질문을 적어보세요</p>
+        <textarea id="question" placeholder="하나님, 저는 지금..." rows="5"></textarea>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn-primary" onclick="goStep(4)">다음</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== STEP 4: 기도하기 ======================== -->
+  <div class="screen" id="step4">
+    <div class="step-screen">
+      <div class="step-header">
+        <div class="back-btn" onclick="goStep(3)">←</div>
+        <span class="progress-text">4 / 6</span>
+        <div style="width:36px"></div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" style="width: 66.6%"></div>
+      </div>
+
+      <div class="step-body">
+        <h2 class="step-title">간절한<br>기도의 시간</h2>
+
+        <div class="content-card" style="margin-bottom: 20px;">
+          <p class="card-main" style="font-size:15px; color: var(--text-muted);">하나님의 뜻은 항상 말씀 안에 있습니다.<br>내 생각이 아니라 말씀을 통해 방향을 바라보세요</p>
+        </div>
+
+        <p class="input-label">나의 기도</p>
+        <textarea id="prayer" placeholder="하나님 아버지, 감사합니다..." rows="5"></textarea>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn-primary" onclick="goStep(5)">다음</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== STEP 5: 나의 결심 ======================== -->
+  <div class="screen" id="step5">
+    <div class="step-screen">
+      <div class="step-header">
+        <div class="back-btn" onclick="goStep(4)">←</div>
+        <span class="progress-text">5 / 6</span>
+        <div style="width:36px"></div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" style="width: 83.3%"></div>
+      </div>
+
+      <div class="step-body">
+        <h2 class="step-title">침묵의 시간<br>고요히 들려오는 음성</h2>
+
+        <p class="input-label">하나님께서 주신 깨달음을 따라 내가 결심한 행동을 적어보세요</p>
+        <textarea id="action" placeholder="오늘 내가 해볼 행동은..." rows="5"></textarea>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn-primary" onclick="goStep(6)">다음</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== STEP 6: 말씀 묵상 ======================== -->
+  <div class="screen" id="step6">
+    <div class="step-screen">
+      <div class="step-header">
+        <div class="back-btn" onclick="goStep(5)">←</div>
+        <span class="progress-text">6 / 6</span>
+        <div style="width:36px"></div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" style="width: 100%"></div>
+      </div>
+
+      <div class="step-body">
+        <h2 class="step-title">말씀으로 보기</h2>
+
+        <div class="verse-card">
+          <p class="verse-text" id="step6VerseText"></p>
+          <p class="verse-ref" id="step6VerseRef"></p>
+        </div>
+
+        <div class="verse-note">
+          이 말씀을 통해 무엇이 느껴지나요?<br>마음에 와닿는 내용을 적어보세요
+        </div>
+
+        <textarea id="reflection" placeholder="마음에 와닿는 내용..." rows="4"></textarea>
+
+        <p class="verse-emphasis">
+          "기도는 답을 얻기 위한 시간이 아니라<br>하나님과 방향을 맞추는 시간입니다"
+        </p>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn-primary" onclick="goComplete()">기록 완료</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== COMPLETE ======================== -->
+  <div class="screen" id="complete">
+    <div class="complete-wrap">
+      <div class="complete-icon">✓</div>
+      <h2 class="complete-title">오늘도<br>하나님께 물었습니다</h2>
+      <p class="complete-sub">작은 질문이,<br>큰 변화를 만듭니다</p>
+
+      <div class="complete-buttons">
+        <button class="btn-primary" onclick="goRecords()">나의 기록 보기</button>
+        <button class="btn-alarm" onclick="openAlarmModal(null)" style="margin-top:0;">
+          🔔 이 기도 알림 설정하기
+        </button>
+        <button class="btn-secondary" onclick="goHome()">홈으로</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== RECORDS ======================== -->
+  <div class="screen" id="records">
+    <div class="records-header">
+      <button class="back-btn" onclick="goHome()" style="width:auto; border-radius:0; padding:0;">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="22" height="22"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <span class="records-title">나의 기록</span>
+      <button style="background:none;border:none;cursor:pointer;color:var(--text-muted);">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="22" height="22"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      </button>
+    </div>
+
+    <div class="records-tabs">
+      <button class="tab-btn active">전체</button>
+      <button class="tab-btn">기도 중</button>
+      <button class="tab-btn">응답됨</button>
+    </div>
+
+    <div class="records-list" id="recordsList">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- ======================== RECORD DETAIL ======================== -->
+  <div class="screen" id="recordDetail">
+    <div class="detail-screen">
+      <div class="detail-header">
+        <button class="back-btn" onclick="goRecords()" style="width:auto;border-radius:0;padding:0;">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="22" height="22"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <span style="font-family:var(--serif);font-size:17px;font-weight:400;margin-left:8px;">기록 상세</span>
+        <div class="detail-date-badge" id="detailDate"></div>
+      </div>
+
+      <div class="detail-body" id="detailBody">
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== ALARM MODAL ======================== -->
+  <div class="modal-overlay" id="alarmModal" onclick="closeAlarmModal(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <h3 class="modal-title">기도 알림 설정</h3>
+      <p class="modal-sub" id="alarmModalSub">기도가 응답될 때까지 매일 알림을 받아보세요</p>
+
+      <!-- 등록된 알림 목록 -->
+      <div id="alarmListWrap" style="display:none;">
+        <div class="alarm-section-label">등록된 알림</div>
+        <div class="alarm-list" id="alarmList"></div>
+      </div>
+
+      <!-- 새 알림 추가 -->
+      <div id="alarmForm">
+        <div class="alarm-section-label">시간 선택</div>
+        <div class="preset-row">
+          <button class="preset-btn" onclick="selectPreset('06:00', this)">
+            <span class="preset-icon">🌅</span>
+            <span class="preset-name">아침</span>
+            <span class="preset-time">06:00</span>
+          </button>
+          <button class="preset-btn" onclick="selectPreset('12:00', this)">
+            <span class="preset-icon">☀️</span>
+            <span class="preset-name">점심</span>
+            <span class="preset-time">12:00</span>
+          </button>
+          <button class="preset-btn" onclick="selectPreset('18:00', this)">
+            <span class="preset-icon">🌆</span>
+            <span class="preset-name">저녁</span>
+            <span class="preset-time">18:00</span>
+          </button>
+          <button class="preset-btn" onclick="selectPreset('21:00', this)">
+            <span class="preset-icon">🌙</span>
+            <span class="preset-name">밤</span>
+            <span class="preset-time">21:00</span>
+          </button>
+        </div>
+
+        <div class="alarm-section-label">직접 입력</div>
+        <div class="time-input-row">
+          <span style="font-size:18px;">⏰</span>
+          <input type="time" id="customTimeInput" value="08:00">
+        </div>
+
+        <div class="alarm-section-label">반복 요일</div>
+        <div class="repeat-grid">
+          <button class="day-btn" data-day="0" onclick="toggleDay(this)">일</button>
+          <button class="day-btn selected" data-day="1" onclick="toggleDay(this)">월</button>
+          <button class="day-btn selected" data-day="2" onclick="toggleDay(this)">화</button>
+          <button class="day-btn selected" data-day="3" onclick="toggleDay(this)">수</button>
+          <button class="day-btn selected" data-day="4" onclick="toggleDay(this)">목</button>
+          <button class="day-btn selected" data-day="5" onclick="toggleDay(this)">금</button>
+          <button class="day-btn" data-day="6" onclick="toggleDay(this)">토</button>
+        </div>
+        <div class="repeat-shortcut-row">
+          <button class="shortcut-btn" onclick="setDays([1,2,3,4,5])">평일</button>
+          <button class="shortcut-btn" onclick="setDays([0,6])">주말</button>
+          <button class="shortcut-btn" onclick="setDays([0,1,2,3,4,5,6])">매일</button>
+        </div>
+
+        <div class="auto-cancel-row">
+          <div>
+            <div class="auto-cancel-label">응답됨 시 자동 해제</div>
+            <div class="auto-cancel-sub">기도가 응답되면 알림이 자동으로 꺼집니다</div>
+          </div>
+          <button class="toggle-switch on" id="autoCancelToggle" onclick="this.classList.toggle('on')"></button>
+        </div>
+
+        <button class="btn-primary" onclick="registerAlarm()">알림 등록하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="nav-btn active" onclick="goHome()" id="navHome">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/></svg>
+      홈
+    </button>
+    <button class="nav-btn" onclick="goRecords()" id="navRecords">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h10"/></svg>
+      기록
+    </button>
+    <button class="nav-center-btn" onclick="startPrayer()">+</button>
+    <button class="nav-btn" id="navWord">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
+      말씀
+    </button>
+    <button class="nav-btn" id="navProfile">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      마이
+    </button>
+  </nav>
+
+</div>
+
+<script>
+  // ===================== DATA =====================
+
+  // 오늘의 묵상 데이터 80개
+  const MEDITATIONS = [
+    { person: '다윗', title: '전쟁 앞에서 먼저 묻다', ref: '사무엘상 23:1-5 (개역개정)', summary: '상황을 듣고 즉시 움직이기보다 먼저 하나님께 묻는 장면입니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '다윗', title: '위험한 선택을 다시 확인하다', ref: '사무엘상 23:9-12 (개역개정)', summary: '사람과 상황의 불확실함 속에서 다시 묻고 방향을 확인합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '다윗', title: '잃어버린 것을 추격할지 묻다', ref: '사무엘상 30:7-10 (개역개정)', summary: '분노와 낙심의 순간에 자신의 감정이 아니라 하나님의 지시를 구합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '다윗', title: '왕이 된 후에도 묻다', ref: '사무엘하 2:1-4 (개역개정)', summary: '성취 이후에도 다음 걸음을 스스로 정하지 않고 하나님께 묻습니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '다윗', title: '블레셋과 싸우기 전 묻다', ref: '사무엘하 5:17-21 (개역개정)', summary: '전쟁의 압박 앞에서도 먼저 하나님께 묻고 순종합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '다윗', title: '이전 승리 방식을 반복하지 않다', ref: '사무엘하 5:22-25 (개역개정)', summary: '같은 문제처럼 보여도 다시 묻고 새로운 방식에 순종합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '다윗', title: '약속 앞에서 겸손히 앉다', ref: '사무엘하 7:18-29 (개역개정)', summary: '하나님의 약속을 듣고 자신의 자격이 아니라 은혜를 고백합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '다윗', title: '죄를 깨닫고 제단을 쌓다', ref: '사무엘하 24:10-25 (개역개정)', summary: '잘못을 인정하고 회개와 예배로 하나님께 돌아갑니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '다윗', title: '하나님을 기다리는 마음', ref: '시편 27:4-14 (개역개정)', summary: '두려움 속에서도 하나님의 얼굴을 구하며 기다리는 기도입니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '다윗', title: '주의 뜻을 행하도록 구하다', ref: '시편 143:7-12 (개역개정)', summary: '위기 속에서 길과 뜻을 가르쳐 달라고 구합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '느헤미야', title: '무너진 소식을 듣고 기도하다', ref: '느헤미야 1:4-11 (개역개정)', summary: '문제를 듣고 먼저 울며 금식하고 하나님께 나아갑니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '느헤미야', title: '왕 앞에서 순간적으로 묵도하다', ref: '느헤미야 2:1-8 (개역개정)', summary: '중요한 요청의 순간에도 마음속으로 하나님께 묻습니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '느헤미야', title: '밤에 조용히 살피다', ref: '느헤미야 2:11-18 (개역개정)', summary: '성급히 말하기 전에 현실을 살피고 부르심을 나눕니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '느헤미야', title: '조롱 앞에서 기도와 파수로 반응하다', ref: '느헤미야 4:4-9 (개역개정)', summary: '방해 앞에서 분노만 하지 않고 기도하며 실제 행동도 준비합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '느헤미야', title: '두려워하는 백성을 세우다', ref: '느헤미야 4:14-20 (개역개정)', summary: '하나님을 기억하게 하며 공동체가 함께 서도록 이끕니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '느헤미야', title: '공동체의 불의를 바로잡다', ref: '느헤미야 5:6-13 (개역개정)', summary: '외부 문제가 아니라 내부의 불의도 하나님 앞에서 다룹니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '느헤미야', title: '위협 앞에서 흔들리지 않다', ref: '느헤미야 6:1-9 (개역개정)', summary: '사람의 계략보다 하나님이 맡기신 일을 붙듭니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '느헤미야', title: '거짓 두려움에 속지 않다', ref: '느헤미야 6:10-16 (개역개정)', summary: '두려움으로 움직이지 않고 분별하며 순종합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '느헤미야', title: '말씀 앞에서 백성을 위로하다', ref: '느헤미야 8:9-12 (개역개정)', summary: '말씀을 듣고 회개하되 기쁨으로 순종하게 합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '느헤미야', title: '마지막까지 기억해 달라고 기도하다', ref: '느헤미야 13:29-31 (개역개정)', summary: '끝까지 하나님 앞에서 자신의 사명을 점검합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '엘리야', title: '말씀대로 숨어 지내다', ref: '열왕기상 17:1-6 (개역개정)', summary: '하나님의 말씀을 전한 뒤 공급의 방식까지 하나님께 맡깁니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '엘리야', title: '가난한 과부에게 말씀을 전하다', ref: '열왕기상 17:7-16 (개역개정)', summary: '부족함 속에서도 하나님의 말씀을 따라 공급을 경험합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '엘리야', title: '죽음 앞에서 부르짖다', ref: '열왕기상 17:17-24 (개역개정)', summary: '이해할 수 없는 고통 앞에서 하나님께 간절히 묻습니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '엘리야', title: '갈멜산에서 하나님을 드러내다', ref: '열왕기상 18:30-39 (개역개정)', summary: '능력 과시가 아니라 하나님이 참 하나님이심을 구합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '엘리야', title: '비를 기다리며 기도하다', ref: '열왕기상 18:41-46 (개역개정)', summary: '응답의 약속을 붙들고 끝까지 기다립니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '엘리야', title: '탈진 속에서 돌봄을 받다', ref: '열왕기상 19:1-8 (개역개정)', summary: '무너진 선지자에게 하나님은 먼저 먹이고 쉬게 하십니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '엘리야', title: '세미한 소리 앞에 서다', ref: '열왕기상 19:9-18 (개역개정)', summary: '하나님은 소란이 아니라 조용한 음성으로 다시 사명을 주십니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '엘리야', title: '엘리사를 부르다', ref: '열왕기상 19:19-21 (개역개정)', summary: '하나님의 다음 사역을 위해 사람을 세우는 순종입니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '엘리야', title: '왕의 교만을 책망하다', ref: '열왕기하 1:1-8 (개역개정)', summary: '하나님이 아닌 다른 곳에 묻는 태도를 드러냅니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '엘리야', title: '마지막 길을 걸어가다', ref: '열왕기하 2:1-11 (개역개정)', summary: '사명의 마지막까지 하나님의 인도하심을 따라갑니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '아브라함', title: '부르심을 따라 떠나다', ref: '창세기 12:1-9 (개역개정)', summary: '익숙한 자리에서 하나님의 말씀을 따라 떠나는 순종입니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '아브라함', title: '눈에 보이는 선택을 내려놓다', ref: '창세기 13:8-18 (개역개정)', summary: '다툼보다 평화를 택하고 하나님의 약속을 받습니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '아브라함', title: '두려움 속에서 약속을 듣다', ref: '창세기 15:1-6 (개역개정)', summary: '불안한 마음 앞에 하나님은 약속과 믿음을 주십니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '아브라함', title: '언약 앞에서 엎드리다', ref: '창세기 17:1-8 (개역개정)', summary: '하나님의 언약을 듣고 자신을 하나님 앞에 낮춥니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '아브라함', title: '하나님의 뜻을 묻고 중보하다', ref: '창세기 18:22-33 (개역개정)', summary: '심판 앞에서 하나님의 공의와 긍휼을 구합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '아브라함', title: '약속의 아들을 기다리다', ref: '창세기 21:1-7 (개역개정)', summary: '오랜 기다림 끝에 하나님의 약속이 이루어집니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '아브라함', title: '아픔 속에서도 하나님의 말씀을 따르다', ref: '창세기 21:8-21 (개역개정)', summary: '가정의 갈등 속에서도 하나님의 말씀을 따라 결정합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '아브라함', title: '이삭을 드리라는 말씀에 순종하다', ref: '창세기 22:1-14 (개역개정)', summary: '이해보다 하나님의 신실하심을 붙드는 순종입니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '아브라함', title: '약속의 땅에서 묘지를 사다', ref: '창세기 23:1-20 (개역개정)', summary: '아직 다 이루어지지 않은 약속을 믿음으로 붙듭니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '아브라함', title: '이삭의 배우자를 믿음으로 준비하다', ref: '창세기 24:1-9 (개역개정)', summary: '다음 세대의 길도 하나님의 약속 안에서 준비합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '한나', title: '괴로움 속에서도 성전에 올라가다', ref: '사무엘상 1:1-8 (개역개정)', summary: '상처와 비교의 자리에서도 하나님 앞에 나아갑니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '한나', title: '마음을 쏟아 기도하다', ref: '사무엘상 1:9-11 (개역개정)', summary: '숨기지 않고 고통을 하나님께 그대로 드립니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '한나', title: '오해 속에서도 기도를 멈추지 않다', ref: '사무엘상 1:12-18 (개역개정)', summary: '사람의 오해보다 하나님께 드린 마음을 붙듭니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '한나', title: '응답을 기다리다', ref: '사무엘상 1:19-20 (개역개정)', summary: '기도 후의 시간도 하나님께 맡기며 기다립니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '한나', title: '서원을 기억하다', ref: '사무엘상 1:21-23 (개역개정)', summary: '응답 이후에도 하나님께 드린 약속을 가볍게 여기지 않습니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '한나', title: '아이를 하나님께 드리다', ref: '사무엘상 1:24-28 (개역개정)', summary: '가장 귀한 응답을 다시 하나님께 올려드립니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '한나', title: '하나님의 구원을 노래하다', ref: '사무엘상 2:1-10 (개역개정)', summary: '응답의 기쁨을 자신의 자랑이 아니라 하나님 찬양으로 돌립니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '한나', title: '매년 작은 겉옷을 지어주다', ref: '사무엘상 2:18-19 (개역개정)', summary: '드린 것을 잊지 않고 사랑과 믿음으로 돌봅니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '한나', title: '더 큰 은혜를 받다', ref: '사무엘상 2:20-21 (개역개정)', summary: '하나님께 드린 삶 가운데 또 다른 은혜를 경험합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '한나', title: '사무엘의 성장으로 열매를 보다', ref: '사무엘상 2:26 (개역개정)', summary: '한 사람의 기도가 다음 세대의 믿음으로 이어집니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '요셉', title: '꿈을 받다', ref: '창세기 37:5-11 (개역개정)', summary: '하나님의 계획은 이해받지 못하는 자리에서 시작될 때가 있습니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '요셉', title: '보디발의 집에서 성실하다', ref: '창세기 39:1-6 (개역개정)', summary: '낮아진 자리에서도 하나님이 함께하심을 삶으로 드러냅니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '요셉', title: '유혹을 거절하다', ref: '창세기 39:7-12 (개역개정)', summary: '눈앞의 기회보다 하나님 앞에서의 정직을 선택합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '요셉', title: '감옥에서도 하나님과 동행하다', ref: '창세기 39:19-23 (개역개정)', summary: '억울한 자리에서도 하나님이 함께하심은 멈추지 않습니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '요셉', title: '꿈 해석을 하나님께 돌리다', ref: '창세기 40:5-23 (개역개정)', summary: '자신의 능력이 아니라 하나님께 해석이 있음을 고백합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '요셉', title: '바로 앞에서 하나님을 높이다', ref: '창세기 41:1-16 (개역개정)', summary: '가장 큰 기회 앞에서도 자신보다 하나님을 앞세웁니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '요셉', title: '지혜로운 준비를 제안하다', ref: '창세기 41:25-36 (개역개정)', summary: '하나님이 보이신 뜻을 현실의 준비로 연결합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '요셉', title: '높아진 자리에서 사명을 감당하다', ref: '창세기 41:37-45 (개역개정)', summary: '성공은 자기 영광이 아니라 생명을 살리는 자리입니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '요셉', title: '형제들을 용서하다', ref: '창세기 45:1-15 (개역개정)', summary: '상처의 역사 속에서도 하나님의 큰 그림을 봅니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '요셉', title: '악을 선으로 바꾸신 하나님을 고백하다', ref: '창세기 50:15-21 (개역개정)', summary: '요셉은 사람의 악보다 하나님의 선하신 뜻을 붙듭니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '모세', title: '떨기나무 앞에서 부르심을 듣다', ref: '출애굽기 3:1-12 (개역개정)', summary: '하나님은 평범한 자리에서 사명을 부르십니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '모세', title: '하나님의 이름을 묻다', ref: '출애굽기 3:13-22 (개역개정)', summary: '부르심 앞에서 하나님이 누구신지를 먼저 확인합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '모세', title: '연약함을 고백하다', ref: '출애굽기 4:1-17 (개역개정)', summary: '부족함을 말하는 모세에게 하나님은 함께하심과 도움을 주십니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '모세', title: '홍해 앞에서 서다', ref: '출애굽기 14:10-16 (개역개정)', summary: '막힌 길 앞에서 하나님은 두려워하지 말고 나아가라고 하십니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '모세', title: '목마름의 원망을 하나님께 아뢰다', ref: '출애굽기 17:1-7 (개역개정)', summary: '백성의 불평 속에서도 하나님께 문제를 가져갑니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '모세', title: '지혜로운 조언을 받아들이다', ref: '출애굽기 18:13-24 (개역개정)', summary: '하나님의 일도 혼자 감당하지 않고 지혜롭게 나눕니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '모세', title: '백성을 위해 중보하다', ref: '출애굽기 32:7-14 (개역개정)', summary: '죄 앞에서 포기하지 않고 하나님의 긍휼을 구합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '모세', title: '주의 길을 보여 달라고 구하다', ref: '출애굽기 33:12-23 (개역개정)', summary: '길보다 하나님 자신과 동행을 구합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '모세', title: '다시 언약 앞에 서다', ref: '출애굽기 34:1-10 (개역개정)', summary: '실패 이후에도 하나님은 다시 말씀 앞에 세우십니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '모세', title: '비방 앞에서 중보하다', ref: '민수기 12:1-13 (개역개정)', summary: '상처받은 자리에서도 원망보다 중보를 선택합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '베드로', title: '말씀에 의지해 그물을 내리다', ref: '누가복음 5:1-11 (개역개정)', summary: '경험과 실패보다 예수님의 말씀에 순종합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '베드로', title: '물 위로 오라 하심에 나아가다', ref: '마태복음 14:28-33 (개역개정)', summary: '두려움 속에서도 주님의 말씀을 붙들고 발을 내딛습니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '베드로', title: '주는 그리스도라 고백하다', ref: '마태복음 16:13-20 (개역개정)', summary: '사람들의 말보다 하나님이 알게 하신 고백 위에 섭니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '베드로', title: '자기 생각을 내려놓아야 함을 배우다', ref: '마태복음 16:21-23 (개역개정)', summary: '주님의 길은 사람의 생각보다 하나님의 뜻을 따릅니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '베드로', title: '변화산에서 영광을 보다', ref: '마태복음 17:1-8 (개역개정)', summary: '놀라운 경험보다 결국 예수님의 말씀을 들어야 합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '베드로', title: '실패 후 통곡하다', ref: '마태복음 26:69-75 (개역개정)', summary: '무너진 자리에서 회개의 눈물이 다시 시작점이 됩니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '베드로', title: '사랑하느냐는 질문 앞에 서다', ref: '요한복음 21:15-19 (개역개정)', summary: '주님은 실패한 사람에게 다시 사랑과 사명을 물으십니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '베드로', title: '성령 안에서 복음을 전하다', ref: '사도행전 2:14-41 (개역개정)', summary: '두려워하던 베드로가 성령 안에서 담대히 증언합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '베드로', title: '은과 금보다 예수 이름을 전하다', ref: '사도행전 3:1-10 (개역개정)', summary: '필요 앞에서 세상의 자원보다 예수 그리스도의 이름을 전합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+    { person: '베드로', title: '환상 후 이방인에게 나아가다', ref: '사도행전 10:9-23 (개역개정)', summary: '자신의 경계를 넘어 하나님의 뜻에 순종합니다.', note: '오늘 나는 이 말씀 앞에서 무엇을 먼저 하나님께 물어야 할까요?', actionPrompt: '하나님께 묻고 순종할 작은 행동 한 가지를 적어보세요.' },
+  ];
+
+  // 말씀 데이터 15개
+  const VERSES = [
+    {
+      text: '너는 마음을 다하여\n여호와를 신뢰하고\n네 명철을 의지하지 말라',
+      ref: '잠언 3:5',
+      emphasis: '"기도는 답을 얻기 위한 시간이 아니라\n하나님과 방향을 맞추는 시간입니다"'
+    },
+    {
+      text: '내가 산을 향하여 눈을 들리라\n나의 도움이 어디서 올까\n나의 도움은 천지를 지으신\n여호와에게서로다',
+      ref: '시편 121:1-2',
+      emphasis: '"도움을 구하기 전, 먼저 눈을 드는 것이\n기도의 시작입니다"'
+    },
+    {
+      text: '아무것도 염려하지 말고\n오직 모든 일에 기도와 간구로\n너희 구할 것을 감사함으로\n하나님께 아뢰라',
+      ref: '빌립보서 4:6',
+      emphasis: '"염려를 기도로 바꾸는 순간,\n마음에 평안이 찾아옵니다"'
+    },
+    {
+      text: '여호와는 나의 목자시니\n내게 부족함이 없으리로다',
+      ref: '시편 23:1',
+      emphasis: '"지금 무언가 부족하게 느껴진다면,\n목자의 손을 다시 붙잡을 때입니다"'
+    },
+    {
+      text: '내가 너희를 향하여 생각하는 생각은\n재앙이 아니라 곧 평안이요\n너희에게 미래와 희망을 주는 것이니라',
+      ref: '예레미야 29:11',
+      emphasis: '"하나님의 계획은 항상 우리보다\n더 멀리, 더 넓게 보고 있습니다"'
+    },
+    {
+      text: '사람의 마음에는 많은 계획이 있어도\n오직 여호와의 뜻만이 완전히 서리라',
+      ref: '잠언 19:21',
+      emphasis: '"내 계획을 내려놓는 것이\n더 큰 계획 안으로 들어가는 문입니다"'
+    },
+    {
+      text: '구하라 그리하면 너희에게 주실 것이요\n찾으라 그리하면 찾아낼 것이요\n문을 두드리라 그리하면\n너희에게 열릴 것이니',
+      ref: '마태복음 7:7',
+      emphasis: '"묻는 것, 그 자체가 이미\n하나님과의 대화를 여는 행동입니다"'
+    },
+    {
+      text: '내 생각이 너희의 생각과 다르며\n내 길은 너희의 길과 다르니라\n여호와의 말씀이니라',
+      ref: '이사야 55:8',
+      emphasis: '"이해되지 않는 길 위에서\n그분의 시각을 신뢰하는 것이 믿음입니다"'
+    },
+    {
+      text: '두려워하지 말라 내가 너와 함께 함이라\n놀라지 말라 나는 네 하나님이 됨이라\n내가 너를 굳세게 하리라',
+      ref: '이사야 41:10',
+      emphasis: '"함께하신다는 약속 하나가\n모든 두려움보다 크습니다"'
+    },
+    {
+      text: '오직 여호와를 앙망하는 자는\n새 힘을 얻으리니\n독수리가 날개치며 올라감 같을 것이요',
+      ref: '이사야 40:31',
+      emphasis: '"지쳤을 때 더욱 그분을 바라보는 것,\n그것이 회복의 시작입니다"'
+    },
+    {
+      text: '범사에 그를 인정하라\n그리하면 네 길을 지도하시리라',
+      ref: '잠언 3:6',
+      emphasis: '"모든 일에서 하나님을 먼저 인정하는 것,\n그것이 지혜의 길입니다"'
+    },
+    {
+      text: '여호와께 네 길을 맡기라\n그를 의지하면 그가 이루시고',
+      ref: '시편 37:5',
+      emphasis: '"맡기는 것은 포기가 아니라\n더 크신 분의 손에 드리는 것입니다"'
+    },
+    {
+      text: '하나님이 우리에게 주신 것은\n두려워하는 마음이 아니요\n오직 능력과 사랑과 절제하는 마음이니',
+      ref: '디모데후서 1:7',
+      emphasis: '"두려움은 하나님께서 주신 것이 아닙니다.\n그분이 주신 것으로 오늘을 걸어가세요"'
+    },
+    {
+      text: '너희 염려를 다 주께 맡기라\n이는 그가 너희를 돌보심이라',
+      ref: '베드로전서 5:7',
+      emphasis: '"돌보심을 믿는 것,\n그것이 염려를 내려놓는 힘입니다"'
+    },
+    {
+      text: '여호와는 네 우편에서\n네 그늘이 되시나니\n낮의 해가 너를 상하게 하지 아니하며\n밤의 달도 너를 해치지 아니하리로다',
+      ref: '시편 121:5-6',
+      emphasis: '"낮에도 밤에도, 언제나\n그분의 그늘 아래 있습니다"'
+    }
+  ];
+
+  // ===================== STATE =====================
+  let currentMeditation = null;
+  let currentVerse = null;
+
+  // Pick today's meditation (same all day, changes daily)
+  function getDailyIndex(arr) {
+    const today = new Date();
+    const seed = today.getFullYear() * 10000 + (today.getMonth()+1) * 100 + today.getDate();
+    return seed % arr.length;
+  }
+
+  // Pick random verse per session (different from daily meditation)
+  function getSessionVerse() {
+    return VERSES[Math.floor(Math.random() * VERSES.length)];
+  }
+
+  // ===================== LOCALSTORAGE =====================
+  const STORAGE_KEY = 'deutneunsigan_records_v1';
+
+  function loadRecords() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch(e) { return []; }
+  }
+
+  function saveRecords(records) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    } catch(e) { console.warn('저장 실패', e); }
+  }
+
+  // ===================== RECORDS STATE =====================
+  let records = loadRecords();
+
+  // Seed sample records if empty
+  if (records.length === 0) {
+    records = [
+      { id: 1, date: '2024.05.20 (월)', emotion: '😔', question: '이직을 해야 할까요?', situation: '지금 마케팅에서 새로운 제안을 받았어요. 변화하고 싶고, 도전하고, 한편으로는 기대돼요.', prayer: '하나님, 어느 길이 당신의 뜻인지 알려주세요.', action: '조금 머뭇거리지 않고, 지혜를 구하며 기도하여 더 기다려보겠습니다.', reflection: '나의 뜻을 내려놓고 말씀 앞에 서고 싶습니다.', verse: '잠언 3:5' },
+      { id: 2, date: '2024.05.19 (일)', emotion: '😊', question: '새로운 프로젝트를 맡아도 될까요?', situation: '팀장님이 새 프로젝트 리드를 제안하셨어요.', prayer: '이 기회가 당신의 뜻이라면 길을 열어주세요.', action: '기도하며 결정을 내주일까지 미루겠습니다.', reflection: '신뢰함이 곧 용기임을 깨달았습니다.', verse: '시편 37:5' },
+      { id: 3, date: '2024.05.18 (토)', emotion: '😰', question: '이 관계를 계속 이어가야 할까요?', situation: '친구와의 갈등이 반복되는 것 같아요.', prayer: '하나님, 이 관계 안에서 당신의 마음을 보여주세요.', action: '먼저 연락해보겠습니다.', reflection: '먼저 사랑하는 것이 그분의 방식임을 느꼈어요.', verse: '이사야 41:10' },
+    ];
+    saveRecords(records);
+  }
+
+  // ===================== NAVIGATION =====================
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    const noNav = ['step1','step2','step3','step4','step5','step6','complete','recordDetail'];
+    document.getElementById('bottomNav').style.display = noNav.includes(id) ? 'none' : 'flex';
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    if (id === 'home') document.getElementById('navHome').classList.add('active');
+    if (id === 'records') document.getElementById('navRecords').classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  function goHome() { showScreen('home'); }
+
+  function startPrayer() {
+    // Reset inputs
+    ['situation','question','prayer','action','reflection','wordReflection'].forEach(id => {
+      document.getElementById(id).value = '';
+      sessionStorage.removeItem('draft_' + id);
+    });
+    sessionStorage.removeItem('draft_emotion');
+    selectedEmotion = '';
+    document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('selected'));
+
+    // Pick today's meditation (daily consistent, 80 records)
+    currentMeditation = MEDITATIONS[getDailyIndex(MEDITATIONS)];
+    document.getElementById('step1Main').innerHTML =
+      '<span style="font-size:11px;color:var(--gold);letter-spacing:1px;font-weight:500;display:block;margin-bottom:10px;">✦ '
+      + currentMeditation.person + '</span>' + currentMeditation.summary;
+    document.getElementById('step1Highlight').textContent = currentMeditation.title;
+    const refQuery1 = encodeURIComponent(currentMeditation.ref);
+    document.getElementById('step1Ref').innerHTML =
+      `<a class="bible-link" href="https://search.naver.com/search.naver?query=${refQuery1}" target="_blank" rel="noopener">${currentMeditation.ref}</a>`;
+    document.getElementById('step1Note').textContent = currentMeditation.note;
+    const actionEl = document.querySelector('#step5 .input-label');
+    if (actionEl) actionEl.textContent = currentMeditation.actionPrompt;
+
+    // Pick random verse for this session
+    currentVerse = getSessionVerse();
+    document.getElementById('step6VerseText').innerHTML = currentVerse.text.replace(/\n/g, '<br>');
+    const refQuery6 = encodeURIComponent(currentVerse.ref + ' 개역개정');
+    document.getElementById('step6VerseRef').innerHTML =
+      `<a class="bible-link" href="https://search.naver.com/search.naver?query=${refQuery6}" target="_blank" rel="noopener">${currentVerse.ref}</a>`;
+    document.querySelector('.verse-emphasis').innerHTML = currentVerse.emphasis.replace(/\n/g, '<br>');
+
+    showScreen('step1');
+  }
+
+  function goStep(n) {
+    // 이동 전 현재 입력값을 draft에 저장
+    saveDraft();
+    showScreen('step'+n);
+  }
+
+  function saveDraft() {
+    const fields = ['wordReflection','situation','question','prayer','action','reflection'];
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) sessionStorage.setItem('draft_' + id, el.value);
+    });
+    if (selectedEmotion) sessionStorage.setItem('draft_emotion', selectedEmotion);
+  }
+
+  function loadDraft() {
+    const fields = ['wordReflection','situation','question','prayer','action','reflection'];
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      const val = sessionStorage.getItem('draft_' + id);
+      if (el && val) el.value = val;
+    });
+    const emo = sessionStorage.getItem('draft_emotion');
+    if (emo) {
+      selectedEmotion = emo;
+      document.querySelectorAll('.emotion-btn').forEach(btn => {
+        if (btn.querySelector('.emoji') && btn.querySelector('.emoji').textContent === emo) {
+          btn.classList.add('selected');
+        }
+      });
+    }
+  }
+
+  function goComplete() {
+    saveCurrentRecord();
+    showScreen('complete');
+  }
+
+  function goRecords() {
+    showScreen('records');
+    renderRecords(currentTab);
+  }
+
+  // ===================== EMOTION =====================
+  let selectedEmotion = '';
+  function selectEmotion(el, emoji) {
+    document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedEmotion = emoji;
+  }
+
+  // ===================== SAVE RECORD =====================
+  function saveCurrentRecord() {
+    const now = new Date();
+    const days = ['일','월','화','수','목','금','토'];
+    const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} (${days[now.getDay()]})`;
+
+    const newRecord = {
+      id: Date.now(),
+      date: dateStr,
+      emotion: selectedEmotion || '🙂',
+      question: document.getElementById('question').value.trim() || '오늘의 기도를 기록했습니다',
+      wordReflection: document.getElementById('wordReflection').value.trim(),
+      situation: document.getElementById('situation').value.trim(),
+      prayer: document.getElementById('prayer').value.trim(),
+      action: document.getElementById('action').value.trim(),
+      reflection: document.getElementById('reflection').value.trim(),
+      verse: currentVerse ? currentVerse.ref : '',
+      meditation: currentMeditation ? currentMeditation.ref : '',
+      meditationTitle: currentMeditation ? currentMeditation.title : '',
+      meditationPerson: currentMeditation ? currentMeditation.person : '',
+    };
+
+    records.unshift(newRecord);
+    saveRecords(records); // localStorage에 저장
+    selectedEmotion = '';
+  }
+
+  // ===================== TOAST =====================
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // ===================== CURRENT TAB =====================
+  let currentTab = '전체'; // '전체' | '기도 중' | '응답됨'
+
+  // ===================== RENDER RECORDS =====================
+  function renderRecords(tab) {
+    if (tab) currentTab = tab;
+
+    // Sync tab button UI
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.toggle('active', b.textContent.trim() === currentTab);
+    });
+
+    const list = document.getElementById('recordsList');
+    list.innerHTML = '';
+
+    let filtered = records;
+    if (currentTab === '기도 중') filtered = records.filter(r => !r.answered);
+    if (currentTab === '응답됨') filtered = records.filter(r => r.answered);
+
+    if (filtered.length === 0) {
+      const emptyMsg = currentTab === '응답됨'
+        ? '아직 응답된 기도가 없습니다<br>기도에 응답이 왔다면 기록에서 표시해보세요'
+        : '기록이 없습니다<br>첫 번째 기도를 시작해보세요';
+      list.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
+        <div style="font-size:40px;margin-bottom:16px;">${currentTab === '응답됨' ? '✦' : '🌿'}</div>
+        <p style="font-family:var(--serif);font-size:16px;line-height:1.8;">${emptyMsg}</p>
+      </div>`;
+      return;
+    }
+
+    filtered.forEach(r => {
+      const card = document.createElement('div');
+      card.className = 'record-card' + (r.answered ? ' answered' : '');
+      const verseTag = r.verse ? `<span style="font-size:10px;color:var(--gold);margin-top:4px;display:block;">✦ ${r.verse}</span>` : '';
+      const answeredBadge = r.answered ? `<span class="answered-badge">✦ 응답됨</span>` : '';
+      card.innerHTML = `
+        <div class="record-left">
+          <div class="record-date">${r.date}</div>
+          <div class="record-question">"${r.question}"</div>
+          ${verseTag}
+          ${answeredBadge}
+        </div>
+        <div class="record-emotion">${r.emotion}</div>
+      `;
+      card.onclick = () => showDetail(r);
+      list.appendChild(card);
+    });
+  }
+
+  // ===================== TOGGLE ANSWERED =====================
+  function startEdit(id) {
+    const r = records.find(rec => rec.id === id);
+    if (!r) return;
+    r._editing = true;
+    showDetail(r);
+  }
+
+  function saveEdit(id) {
+    const idx = records.findIndex(rec => rec.id === id);
+    if (idx === -1) return;
+    const r = records[idx];
+    const keyMap = {
+      wordReflection: '말씀 묵상 메모',
+      situation: '나의 상황',
+      question: '하나님께 드린 질문',
+      prayer: '오늘의 기도',
+      action: '나의 결심과 행동',
+      reflection: '말씀으로 받은 깨달음'
+    };
+    Object.keys(keyMap).forEach(key => {
+      const el = document.getElementById('edit_' + key);
+      if (el) records[idx][key] = el.value.trim();
+    });
+    // Update question summary if changed
+    if (records[idx].question) {
+      // keep as-is
+    }
+    r._editing = false;
+    saveRecords(records);
+    showToast('수정이 저장되었습니다');
+    showDetail(records[idx]);
+  }
+
+  function toggleAnswered(id) {
+    const idx = records.findIndex(r => r.id === id);
+    if (idx === -1) return;
+    records[idx].answered = !records[idx].answered;
+    saveRecords(records);
+    const isNowAnswered = records[idx].answered;
+    // 응답됨으로 바뀌면 autoCancel 알람 자동 해제
+    if (isNowAnswered) {
+      loadAlarms().filter(a => a.recordId === records[idx].id && a.autoCancel).forEach(a => deleteAlarm(a.id, true));
+    }
+    showToast(isNowAnswered ? '✦ 응답됨 · 알림이 자동 해제되었습니다' : '기도 중으로 이동했습니다');
+    showDetail(records[idx]); // refresh detail view
+  }
+
+  // ===================== RECORD DETAIL =====================
+  function showDetail(r) {
+    document.getElementById('detailDate').textContent = r.date;
+    const body = document.getElementById('detailBody');
+
+    const sections = [
+      { key: 'wordReflection', label: '말씀 묵상 메모', content: r.wordReflection },
+      { key: 'situation',      label: '나의 상황',        content: r.situation },
+      { key: 'question',       label: '하나님께 드린 질문', content: r.question },
+      { key: 'prayer',         label: '오늘의 기도',       content: r.prayer },
+      { key: 'action',         label: '나의 결심과 행동',   content: r.action },
+      { key: 'reflection',     label: '말씀으로 받은 깨달음', content: r.reflection },
+    ];
+
+    const verseTag = r.verse
+      ? `<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(44,62,88,0.07);padding:5px 12px;border-radius:20px;font-size:12px;color:var(--navy);margin-top:8px;">✦ ${r.verse}</div>`
+      : '';
+    const meditationTag = (r.meditationPerson && r.meditationTitle)
+      ? `<div style="background:rgba(44,62,88,0.05);border-radius:14px;padding:16px 20px;">`
+        + `<div style="font-size:10px;color:var(--gold);letter-spacing:1px;font-weight:600;margin-bottom:4px;">오늘의 말씀</div>`
+        + `<div style="font-family:var(--serif);font-size:14px;color:var(--navy);font-weight:500;">${r.meditationPerson} — ${r.meditationTitle}</div>`
+        + `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${r.meditation || ''}</div></div>`
+      : '';
+
+    const answeredStatusBlock = r.answered
+      ? `<div style="background:rgba(184,156,106,0.1);border:1px solid rgba(184,156,106,0.3);border-radius:14px;padding:18px 20px;display:flex;align-items:center;gap:12px;">
+          <span style="font-size:24px;">✦</span>
+          <div>
+            <div style="font-size:11px;color:#8A6D3B;letter-spacing:1px;font-weight:600;margin-bottom:3px;">응답됨</div>
+            <div style="font-family:var(--serif);font-size:14px;color:var(--text-muted);line-height:1.6;">하나님께서 이 기도에 응답하셨습니다</div>
+          </div>
+        </div>`
+      : '';
+
+    const actionBtn = r.answered
+      ? `<button class="btn-undo-answered" onclick="toggleAnswered(${r.id})">기도 중으로 되돌리기</button>`
+      : `<button class="btn-answered" onclick="toggleAnswered(${r.id})">
+          <span>✦</span> 응답됨으로 표시하기
+        </button>`;
+
+    // 편집 모드 여부
+    const isEditing = r._editing || false;
+
+    const sectionsHtml = sections.filter(s => s.content || isEditing).map(s => {
+      const fieldId = 'edit_' + s.key;
+      if (isEditing) {
+        return `<div class="detail-section">
+          <div class="detail-section-label">${s.label}</div>
+          <textarea id="${fieldId}" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;font-family:var(--serif);font-size:15px;color:var(--text);line-height:1.7;resize:none;outline:none;min-height:90px;margin-top:6px;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'">${s.content || ''}</textarea>
+        </div>`;
+      }
+      return `<div class="detail-section">
+        <div class="detail-section-label">${s.label}</div>
+        <div class="detail-section-content">${s.content}</div>
+      </div>`;
+    }).join('');
+
+    const editBtn = isEditing
+      ? `<button class="btn-primary" onclick="saveEdit(${r.id})" style="margin-bottom:0;">수정 완료</button>`
+      : `<button class="btn-secondary" onclick="startEdit(${r.id})" style="margin-bottom:0;">✎ 내용 수정하기</button>`;
+
+    const alarmCount = loadAlarms().filter(a => a.recordId === r.id).length;
+    const alarmBtn = !r.answered
+      ? `<button class="btn-alarm" onclick="openAlarmModal(${r.id})">
+          🔔 알림 설정 ${alarmCount > 0 ? `<span style="background:var(--navy);color:#fff;font-size:10px;padding:2px 7px;border-radius:20px;margin-left:4px;">${alarmCount}</span>` : ''}
+        </button>`
+      : '';
+
+    body.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+        <span style="font-size:32px;">${r.emotion}</span>
+        <div>
+          <span style="font-family:var(--serif);font-size:16px;color:var(--text-muted);">오늘의 감정</span>
+          ${verseTag}
+        </div>
+      </div>
+      ${meditationTag}
+      ${answeredStatusBlock}
+      ${sectionsHtml}
+      <div style="display:flex;flex-direction:column;gap:10px;padding-bottom:40px;">
+        ${editBtn}
+        ${alarmBtn}
+        ${actionBtn}
+      </div>
+    `;
+
+    showScreen('recordDetail');
+  }
+
+
+  // ===================== ALARM SYSTEM =====================
+  // 방식: SW는 알림 표시만, 스케줄은 localStorage 기반 폴링
+  // → 앱이 열릴 때마다 + Visibility change 때마다 체크
+  // → SW periodic background sync로 백그라운드에서도 체크
+
+  const ALARM_KEY = 'prayerAlarms_v1';
+  let currentAlarmRecordId = null;
+  let alarmPollTimer = null;
+
+  function loadAlarms() {
+    try { return JSON.parse(localStorage.getItem(ALARM_KEY) || '[]'); }
+    catch(e) { return []; }
+  }
+  function saveAlarms(a) { localStorage.setItem(ALARM_KEY, JSON.stringify(a)); }
+
+  // ── SW 등록 (알림 표시 전용) ──────────────────────────────
+  async function registerSW() {
+    if (!('serviceWorker' in navigator)) return null;
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js', { scope: '/prayer/' });
+      await navigator.serviceWorker.ready;
+      return reg;
+    } catch(e) { console.warn('SW 등록 실패:', e); return null; }
+  }
+
+  // ── SW로 알림 표시 요청 ──────────────────────────────────
+  async function fireNotification(alarm) {
+    const record = records.find(r => r.id === alarm.recordId) || null;
+    const body = record
+      ? `"${record.question.substring(0,30)}${record.question.length>30?'…':''}" 기도 시간입니다`
+      : '오늘도 하나님께 먼저 물어보세요 🙏';
+
+    if (!('serviceWorker' in navigator)) {
+      // SW 없으면 기본 Notification 사용
+      if (Notification.permission === 'granted') {
+        new Notification('묻는 기도 🙏', { body, tag: alarm.id, icon: 'icon-192.png' });
+      }
+      return;
+    }
+
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      reg.active.postMessage({ type: 'SHOW_NOTIFICATION', title: '묻는 기도 🙏', body, tag: alarm.id });
+    } catch(e) {
+      // fallback
+      if (Notification.permission === 'granted') {
+        new Notification('묻는 기도 🙏', { body, tag: alarm.id, icon: 'icon-192.png' });
+      }
+    }
+  }
+
+  // ── 핵심: 알람 폴링 체크 ─────────────────────────────────
+  // 매분 실행 — 현재 시각이 등록된 알람과 일치하면 발송
+  function checkAlarms() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    const currentTime = hh + ':' + mm;
+    const currentDay  = now.getDay();
+
+    const alarms = loadAlarms();
+    let changed = false;
+
+    alarms.forEach(alarm => {
+      if (!alarm.active) return;
+      if (alarm.time !== currentTime) return;
+      if (!alarm.days.includes(currentDay)) return;
+
+      // 같은 분에 중복 발송 방지
+      const lastFiredKey = 'lastFired_' + alarm.id;
+      const lastFired = localStorage.getItem(lastFiredKey);
+      const todayMinKey = now.toDateString() + '_' + currentTime;
+      if (lastFired === todayMinKey) return;
+      localStorage.setItem(lastFiredKey, todayMinKey);
+
+      // autoCancel 체크
+      const rec = records.find(r => r.id === alarm.recordId);
+      if (alarm.autoCancel && rec && rec.answered) {
+        alarm.active = false;
+        changed = true;
+        return;
+      }
+
+      fireNotification(alarm);
+    });
+
+    // 비활성화된 알람 정리
+    const filtered = alarms.filter(a => a.active);
+    if (changed) saveAlarms(filtered);
+  }
+
+  // ── 폴링 시작 ─────────────────────────────────────────────
+  function startAlarmPoll() {
+    if (alarmPollTimer) clearInterval(alarmPollTimer);
+
+    // 즉시 한 번 체크
+    checkAlarms();
+
+    // 다음 정각 분(:00초)까지 대기 후 매분 실행
+    const now = new Date();
+    const msToNextMin = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+
+    setTimeout(() => {
+      checkAlarms();
+      alarmPollTimer = setInterval(checkAlarms, 60000);
+    }, msToNextMin);
+  }
+
+  // 탭이 다시 보일 때도 체크
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkAlarms();
+      startAlarmPoll(); // 타이머 재동기화
+    }
+  });
+
+  // ── 알람 등록 ─────────────────────────────────────────────
+  async function registerAlarm() {
+    const time = document.getElementById('customTimeInput').value;
+    if (!time) { showToast('시간을 선택해주세요'); return; }
+
+    const selectedDays = [];
+    document.querySelectorAll('.day-btn.selected').forEach(btn => {
+      selectedDays.push(parseInt(btn.dataset.day));
+    });
+    if (selectedDays.length === 0) { showToast('반복 요일을 하나 이상 선택해주세요'); return; }
+
+    const autoCancel = document.getElementById('autoCancelToggle').classList.contains('on');
+
+    // 알림 권한 요청
+    let permission = Notification.permission;
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
+    }
+    if (permission !== 'granted') {
+      showToast('알림 권한이 필요합니다. 브라우저 설정에서 허용해주세요.');
+      return;
+    }
+
+    // SW 등록 (백그라운드 알림용)
+    await registerSW();
+
+    const alarm = {
+      id: 'alarm_' + Date.now(),
+      recordId: currentAlarmRecordId,
+      time,
+      days: selectedDays,
+      autoCancel,
+      active: true,
+      createdAt: Date.now()
+    };
+
+    const alarms = loadAlarms();
+    alarms.push(alarm);
+    saveAlarms(alarms);
+
+    // 등록 확인용 즉시 테스트 알림 (3초 후)
+    setTimeout(async () => {
+      const reg = await navigator.serviceWorker.ready.catch(() => null);
+      if (reg && reg.active) {
+        reg.active.postMessage({
+          type: 'SHOW_NOTIFICATION',
+          title: '묻는 기도 🔔',
+          body: `${time} 알림이 등록되었습니다`,
+          tag: 'test_' + alarm.id
+        });
+      } else if (Notification.permission === 'granted') {
+        new Notification('묻는 기도 🔔', { body: `${time} 알림이 등록되었습니다` });
+      }
+    }, 3000);
+
+    showToast('🔔 알림이 등록되었습니다 (3초 후 테스트 알림)');
+    renderAlarmList();
+
+    // 폼 초기화
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('selected'));
+    document.getElementById('customTimeInput').value = '08:00';
+    setDays([1,2,3,4,5]);
+  }
+
+  // ── SW에 메시지 (호환용 유지) ─────────────────────────────
+  async function sendToSW(message) {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && reg.active) reg.active.postMessage(message);
+    } catch(e) { console.warn('SW 메시지 실패:', e); }
+  }
+
+  // ── 알람 삭제 ─────────────────────────────────────────────
+  function deleteAlarm(alarmId, silent) {
+    const alarms = loadAlarms().filter(a => a.id !== alarmId);
+    saveAlarms(alarms);
+    sendToSW({ type: 'CANCEL_ALARM', alarmId });
+    if (!silent) {
+      showToast('알림이 삭제되었습니다');
+      renderAlarmList();
+    }
+  }
+
+  // ── 앱 로드 시 초기화 ─────────────────────────────────────
+  async function resumeAlarms() {
+    // SW 등록 시도
+    await registerSW();
+
+    // autoCancel 알람 정리
+    const alarms = loadAlarms();
+    let changed = false;
+    alarms.forEach(alarm => {
+      const rec = records.find(r => r.id === alarm.recordId);
+      if (alarm.autoCancel && rec && rec.answered) {
+        alarm.active = false;
+        changed = true;
+      }
+    });
+    if (changed) saveAlarms(alarms.filter(a => a.active));
+
+    // 폴링 시작
+    startAlarmPoll();
+  }
+
+  // ── 모달 열기/닫기 ───────────────────────────────────────
+  function openAlarmModal(recordId) {
+    currentAlarmRecordId = recordId !== null ? recordId : (records[0] ? records[0].id : null);
+    const record = records.find(r => r.id === currentAlarmRecordId);
+    const sub = document.getElementById('alarmModalSub');
+    sub.textContent = record
+      ? `"${record.question.substring(0,30)}${record.question.length>30?'…':''}"에 대한 알림`
+      : '기도가 응답될 때까지 매일 알림을 받아보세요';
+    renderAlarmList();
+    document.getElementById('alarmModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeAlarmModal(e) {
+    if (!e || e.target === document.getElementById('alarmModal')) {
+      document.getElementById('alarmModal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  }
+
+  function renderAlarmList() {
+    const alarms = loadAlarms().filter(a => a.recordId === currentAlarmRecordId);
+    const wrap = document.getElementById('alarmListWrap');
+    const list = document.getElementById('alarmList');
+    if (alarms.length === 0) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    const dayNames = ['일','월','화','수','목','금','토'];
+    list.innerHTML = alarms.map(a => {
+      const daysStr = a.days.length === 7 ? '매일'
+        : a.days.length === 5 && !a.days.includes(0) && !a.days.includes(6) ? '평일'
+        : a.days.map(d => dayNames[d]).join('·');
+      return `<div class="alarm-item">
+        <div class="alarm-item-dot"></div>
+        <div class="alarm-item-info">
+          <div class="alarm-item-time">${a.time}</div>
+          <div class="alarm-item-days">${daysStr} · ${a.autoCancel ? '응답 시 자동 해제' : '수동 해제'}</div>
+        </div>
+        <button class="alarm-delete-btn" onclick="deleteAlarm('${a.id}')">×</button>
+      </div>`;
+    }).join('');
+  }
+
+  function selectPreset(time, btn) {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    document.getElementById('customTimeInput').value = time;
+  }
+
+  function toggleDay(btn) { btn.classList.toggle('selected'); }
+
+  function setDays(days) {
+    document.querySelectorAll('.day-btn').forEach(btn => {
+      btn.classList.toggle('selected', days.includes(parseInt(btn.dataset.day)));
+    });
+  }
+
+  // ===================== TABS =====================
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      renderRecords(this.textContent.trim());
+    });
+  });
+
+  // ===================== INIT =====================
+  resumeAlarms();
+  showScreen('home');</script>
+</body>
+</html>
