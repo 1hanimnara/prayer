@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOC<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1511,6 +1511,7 @@
         </div>
 
         <button class="btn-primary" onclick="registerAlarm()">알림 등록하기</button>
+        <button class="btn-secondary" onclick="closeAlarmModal(); goHome();" style="margin-top:10px;">홈으로</button>
       </div>
     </div>
   </div>
@@ -1776,8 +1777,8 @@
     selectedEmotion = '';
     document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('selected'));
 
-    // Pick today's meditation (daily consistent, 80 records)
-    currentMeditation = MEDITATIONS[getDailyIndex(MEDITATIONS)];
+    // Pick random meditation every session (80 records)
+    currentMeditation = MEDITATIONS[Math.floor(Math.random() * MEDITATIONS.length)];
     document.getElementById('step1Main').innerHTML =
       '<span style="font-size:11px;color:var(--gold);letter-spacing:1px;font-weight:500;display:block;margin-bottom:10px;">✦ '
       + currentMeditation.person + '</span>' + currentMeditation.summary;
@@ -1801,9 +1802,9 @@
   }
 
   function goStep(n) {
-    // 이동 전 현재 입력값을 draft에 저장
-    saveDraft();
+    saveDraft();          // 현재 스텝 내용 저장
     showScreen('step'+n);
+    loadDraft();          // 이동한 스텝 내용 복원
   }
 
   function saveDraft() {
@@ -2362,3 +2363,4 @@
   showScreen('home');</script>
 </body>
 </html>
+
